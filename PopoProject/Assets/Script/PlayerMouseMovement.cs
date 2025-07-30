@@ -23,6 +23,8 @@ public class PlayerMouseMovement : MonoBehaviour
     public float jumpDuration = 0.2f;
     public LayerMask groundLayer;
     public LayerMask eventLayer;
+    public LayerMask onewayLayer;
+    public LayerMask trapLayer;
 
     private bool isFlying = false;
     private bool isBoostFlying = false; // ★ Boost 비행 중인지
@@ -53,7 +55,7 @@ public class PlayerMouseMovement : MonoBehaviour
     private float bothClickThreshold = 0.1f;
     private float fallCooldown = 0.2f;
     private float fallLockUntil = 0f;
-
+    private RaycastHit2D Hit;
 
 
     public enum BoostType { None, Dash, Jump }
@@ -175,10 +177,17 @@ public class PlayerMouseMovement : MonoBehaviour
             Debug.Log("트리거 발동!");
 
         }
+
+        if (breakHit.collider != null && breakHit.collider.CompareTag("Trap"))
+        {
+            Debug.Log("이벤트 타일(Trap)에 닿아 사망!");
+            Destroy(gameObject);
+        }
     }
 
     void FixedUpdate()
     {
+        RaycastHit2D hit = IsBreak();
         if (isFlying)
         {
             float holdTime = Mathf.Clamp(Time.time - holdStartTime, 0f, maxHoldTime);
@@ -302,11 +311,15 @@ public class PlayerMouseMovement : MonoBehaviour
     // ★ 벽 충돌 시 Boost 비행 강제 종료
     void OnCollisionEnter2D(Collision2D collision)
     {
-        if ((isBoostFlying && collision.gameObject.layer == LayerMask.NameToLayer("Wall")) || collision.gameObject.layer == LayerMask.NameToLayer("Ground"))
+        if (!collision.collider.CompareTag("OneWay"))
         {
-            StopBoostFly();
-            Debug.Log("벽에 부딪혀 Boost 정지!");
+            if ((isBoostFlying && collision.gameObject.layer == LayerMask.NameToLayer("Wall")) || collision.gameObject.layer == LayerMask.NameToLayer("Ground"))
+            {
+                StopBoostFly();
+                Debug.Log("벽에 부딪혀 Boost 정지!");
+            }
         }
+        
     }
 
     public void SetBoost(BoostType type)
@@ -328,26 +341,37 @@ public class PlayerMouseMovement : MonoBehaviour
         }
     }
 
+
+
     bool IsGrounded()
     {
+        if (isJumping || isDashing || isFlying || isBoostFlying)
+        {
+            return false; // 비행/점프/대시 중엔 무시
+        }
+
         float rayDistance = 1.3f;
         Vector2 origin = transform.position + Vector3.down * 0.2f;
         RaycastHit2D hit = Physics2D.Raycast(origin, Vector2.down, rayDistance, groundLayer);
         Debug.DrawRay(origin, Vector2.down * rayDistance, hit.collider ? Color.green : Color.red);
+
+
+
         return hit.collider != null;
     }
 
     public RaycastHit2D IsBreak()
     {
+        if (isJumping || isDashing || isFlying || isBoostFlying)
+        {
+            return new RaycastHit2D(); // 비행/점프/대시 중엔 무시
+        }
         float rayDistance = 1.4f;
         Vector2 origin = transform.position + Vector3.down * 0.2f;
         RaycastHit2D hit = Physics2D.Raycast(origin, Vector2.down, rayDistance, eventLayer);
         Debug.DrawRay(origin, Vector2.down * rayDistance, hit.collider ? Color.green : Color.red);
 
-
-        // 부딪힌 오브젝트가 target과 같을 때만 true
         return hit;
-
     }
 
 }

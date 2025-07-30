@@ -9,6 +9,7 @@ TagManager:
   - CrystalJump
   - CrystalDash
   - Breakable
+  - OneWay
   layers:
   - Default
   - TransparentFX
