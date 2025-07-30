@@ -45,6 +45,7 @@ public class PlayerMouseMovement : MonoBehaviour
     private bool isRepeatQueued = false;
     private bool spaceHeld = false;
     private bool doubleClickQueued = false;
+    private bool isFallevent = false;
     private int queuedDirection = 0;
     private enum InputDirection { None, Left, Right }
     private InputDirection lastClickDir = InputDirection.None;
@@ -52,7 +53,7 @@ public class PlayerMouseMovement : MonoBehaviour
     private float bothClickThreshold = 0.1f;
     private float fallCooldown = 0.2f;
     private float fallLockUntil = 0f;
-    
+
 
 
     public enum BoostType { None, Dash, Jump }
@@ -68,6 +69,7 @@ public class PlayerMouseMovement : MonoBehaviour
     {
         bool grounded = IsGrounded();
         bool breaked = IsBreak();
+        RaycastHit2D breakHit = IsBreak();
         spaceHeld = Input.GetKey(KeyCode.Space);
 
         bool leftInputDown = Input.GetMouseButtonDown(0) || Input.GetKeyDown(KeyCode.A);
@@ -75,6 +77,8 @@ public class PlayerMouseMovement : MonoBehaviour
         bool leftInputHeld = Input.GetMouseButton(0) || Input.GetKey(KeyCode.A);
         bool rightInputHeld = Input.GetMouseButton(1) || Input.GetKey(KeyCode.S);
         bool anyMouseInput = Input.GetMouseButtonDown(0) || Input.GetMouseButtonDown(1);
+
+        RaycastHit2D hit = IsBreak();
 
         leftHeld = leftInputHeld;
         rightHeld = rightInputHeld;
@@ -116,7 +120,7 @@ public class PlayerMouseMovement : MonoBehaviour
             timer = 0;
             ani.SetBool("jump", true);
         }
-        else if (grounded && !leftInputHeld && !rightInputHeld)
+        else if ((grounded || breaked) && !leftInputHeld && !rightInputHeld)
         {
             timer += Time.deltaTime;
             ani.SetBool("jump", false);
@@ -127,9 +131,15 @@ public class PlayerMouseMovement : MonoBehaviour
 
         transform.localScale = new Vector3(dir, 1f, 1f);
 
-        if (!grounded && Mathf.Abs(leftClickTime - rightClickTime) < bothClickThreshold && !isFlying && !isJumping && !isDashing && Time.time > fallLockUntil)
+        if ((!grounded || !breaked) && Mathf.Abs(leftClickTime - rightClickTime) < bothClickThreshold && !isFlying && !isJumping && !isDashing && Time.time > fallLockUntil)
         {
             StartFall();
+            // 이벤트 타일 낙하 시 파괴
+            if (breakHit.collider != null && breakHit.collider.CompareTag("Breakable"))
+            {
+                Destroy(breakHit.collider.gameObject);
+                Debug.Log("낙하 중 이벤트 타일 파괴됨!");
+            }
         }
 
         if (!isFlying && !isDashing && !isJumping && (grounded || breaked) && !isBoostFlying)
@@ -160,6 +170,11 @@ public class PlayerMouseMovement : MonoBehaviour
             StopBoostFly();
             Debug.Log("비행 중 마우스 입력으로 즉시 취소됨");
         }
+        if (hit.collider != null && isFallevent == true)
+        {
+            Debug.Log("트리거 발동!");
+
+        }
     }
 
     void FixedUpdate()
@@ -179,7 +194,7 @@ public class PlayerMouseMovement : MonoBehaviour
             float y = jumpArc.Evaluate(t) * arcHeight;
             rb.linearVelocity = new Vector2(x, y);
         }
-        else if (!isFlying && !isDashing && !isJumping && IsGrounded())
+        else if (!isFlying && !isDashing && !isJumping && (IsGrounded() || IsBreak()))
         {
             if (!isBoostFlying)
                 rb.linearVelocity = new Vector2(0f, rb.linearVelocity.y);
@@ -197,7 +212,7 @@ public class PlayerMouseMovement : MonoBehaviour
         }
 
         // ★ Boost 비행 중 → 바닥에 닿으면 종료
-        if (isBoostFlying && IsGrounded())
+        if (isBoostFlying && (IsGrounded() || IsBreak()))
         {
             StopBoostFly();
         }
@@ -246,9 +261,11 @@ public class PlayerMouseMovement : MonoBehaviour
 
     void StartFall()
     {
+        isFallevent = true;
         isFlying = false;
         rb.gravityScale = 8.5f;
         rb.linearVelocity = Vector2.down * 20f;
+        isFallevent = false;
         Debug.Log("낙하");
     }
 
@@ -320,16 +337,17 @@ public class PlayerMouseMovement : MonoBehaviour
         return hit.collider != null;
     }
 
-    public bool IsBreak()
+    public RaycastHit2D IsBreak()
     {
-        float rayDistance = 1.5f;
+        float rayDistance = 1.4f;
         Vector2 origin = transform.position + Vector3.down * 0.2f;
         RaycastHit2D hit = Physics2D.Raycast(origin, Vector2.down, rayDistance, eventLayer);
         Debug.DrawRay(origin, Vector2.down * rayDistance, hit.collider ? Color.green : Color.red);
-        Debug.Log("이벤트 타일 감지 성공");
+
+
         // 부딪힌 오브젝트가 target과 같을 때만 true
-        return hit.collider != null;
-        
+        return hit;
+
     }
 
 }
