@@ -183,6 +183,9 @@ public class PlayerMouseMovement : MonoBehaviour
             Debug.Log("이벤트 타일(Trap)에 닿아 사망!");
             Destroy(gameObject);
         }
+
+        
+
     }
 
     void FixedUpdate()
@@ -293,11 +296,26 @@ public class PlayerMouseMovement : MonoBehaviour
     // ★ Boost 비행 종료
     void StopBoostFly()
     {
+        bool leftInputDown = Input.GetMouseButtonDown(0) || Input.GetKeyDown(KeyCode.A);
+        bool rightInputDown = Input.GetMouseButtonDown(1) || Input.GetKeyDown(KeyCode.S);
         isBoostFlying = false;
         rb.gravityScale = 2f;
         rb.linearVelocity = Vector2.zero;
 
         StartCoroutine(DelayedGravityRestore(0.2f));
+        if (!isFlying && !isDashing && !isBoostFlying && !isJumping && !(IsGrounded() || IsBreak()))
+        {
+            if (leftInputDown)
+            {
+                StartFlying(Vector2.left);
+                leftFlying = true;
+            }
+            else if (rightInputDown)
+            {
+                StartFlying(Vector2.right);
+                rightFlying = true;
+            }
+        }
         Debug.Log("Boost 비행 종료");
     }
 
@@ -319,7 +337,13 @@ public class PlayerMouseMovement : MonoBehaviour
                 Debug.Log("벽에 부딪혀 Boost 정지!");
             }
         }
-        
+        if (collision.gameObject.layer == LayerMask.NameToLayer("Trap"))
+        {
+            Debug.Log("트랩 콜라이더와 충돌 - 사망!");
+            Destroy(gameObject);
+            return;
+        }
+
     }
 
     public void SetBoost(BoostType type)
