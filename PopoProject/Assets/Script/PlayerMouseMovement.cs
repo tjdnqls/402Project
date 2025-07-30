@@ -1,15 +1,8 @@
-// ================================================
-// PlayerMouseMovement.cs (주석 버전)
-// - 플레이어의 마우스 / 키보드 입력 기반 점프, 대시, 포물선 이동 구현
-// - 크리스탈 아이템 기반 Boost(점프/대시) 시스템 포함
-// - Boost 대시/점프: 무한 비행 구현됨 ★
-// - 벽 충돌 시 Boost 정지 기능 포함됨 ★
-// ================================================
-
 using System.Collections;
 using System.Runtime.InteropServices.ComTypes;
 using Unity.VisualScripting;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class PlayerMouseMovement : MonoBehaviour
 {
@@ -71,6 +64,7 @@ public class PlayerMouseMovement : MonoBehaviour
     {
         bool grounded = IsGrounded();
         bool breaked = IsBreak();
+        bool wall = IsWalled();
         RaycastHit2D breakHit = IsBreak();
         spaceHeld = Input.GetKey(KeyCode.Space);
 
@@ -181,7 +175,7 @@ public class PlayerMouseMovement : MonoBehaviour
         if (breakHit.collider != null && breakHit.collider.CompareTag("Trap"))
         {
             Debug.Log("이벤트 타일(Trap)에 닿아 사망!");
-            Destroy(gameObject);
+            SceneManager.LoadScene(SceneManager.GetActiveScene().name);
         }
 
         
@@ -340,7 +334,7 @@ public class PlayerMouseMovement : MonoBehaviour
         if (collision.gameObject.layer == LayerMask.NameToLayer("Trap"))
         {
             Debug.Log("트랩 콜라이더와 충돌 - 사망!");
-            Destroy(gameObject);
+            SceneManager.LoadScene(SceneManager.GetActiveScene().name);
             return;
         }
 
@@ -365,7 +359,15 @@ public class PlayerMouseMovement : MonoBehaviour
         }
     }
 
+    public float GetDir()
+    {
+        return dir;
+    }
 
+    public void SetDir(float value)
+    {
+        dir = value;
+    }
 
     bool IsGrounded()
     {
@@ -398,4 +400,19 @@ public class PlayerMouseMovement : MonoBehaviour
         return hit;
     }
 
+    bool IsWalled()
+    {
+
+        float rayDistance = 0.5f;
+        float rayDistancee = 0.5f;
+        Vector2 origin = transform.position + Vector3.right * 0.2f;
+        Vector2 originn = transform.position + Vector3.left * 0.2f;
+        RaycastHit2D hit = Physics2D.Raycast(origin, Vector2.right, rayDistance, groundLayer);
+        RaycastHit2D hitt = Physics2D.Raycast(originn, Vector2.left, rayDistancee, groundLayer);
+        Debug.DrawRay(origin, Vector2.right * rayDistance, hit.collider ? Color.green : Color.red);
+        Debug.DrawRay(originn, Vector2.left * rayDistancee, hitt.collider ? Color.green : Color.red);
+
+
+        return hit.collider!= null;
+    }
 }
